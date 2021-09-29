@@ -19,6 +19,9 @@ import androidx.fragment.app.Fragment
 import com.example.trpo_classifier.MainActivity
 import com.example.trpo_classifier.databinding.CamScreenBinding
 import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.label.ImageLabeler
+import com.google.mlkit.vision.label.ImageLabeling
+import com.google.mlkit.vision.label.defaults.ImageLabelerOptions
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -32,6 +35,7 @@ class CamFragment : Fragment() {
     private val REQUEST_CODE_PERMISSIONS = 10
     private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
     private lateinit var cameraExecutor: ExecutorService
+    private lateinit var labeler: ImageLabeler
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -45,7 +49,8 @@ class CamFragment : Fragment() {
     override fun onStart() {
         super.onStart()
         cameraExecutor = Executors.newSingleThreadExecutor()
-
+        labeler =
+            ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS)
         requestCameraPermissions()
     }
 
@@ -75,8 +80,22 @@ class CamFragment : Fragment() {
                                 mediaImage,
                                 imageProxy.imageInfo.rotationDegrees
                             )
-                            //TODO Pass image to an ML Kit Vision API
-                            binding.outputTextView.text = "Image processing"
+
+                            labeler.process(image)
+                                .addOnSuccessListener { labels ->
+                                    val outPutArray: MutableList<ClassifierOutput> = mutableListOf()
+                                    outPutArray.clear()
+                                    labels.forEach { label ->
+                                        val text = label.text
+                                        val confidence = label.confidence
+                                        outPutArray.add(ClassifierOutput(text, confidence))
+                                    }
+                                    binding.outputTextView.text = outPutArray.toString()
+                                    Log.e(TAG, "startCamera: Classifier is updating")
+                                }
+                                .addOnFailureListener {
+                                    Log.e(TAG, "startCamera: Classifier ex", it.cause)
+                                }
                         }
                     })
                 }
@@ -133,6 +152,12 @@ class CamFragment : Fragment() {
                 )
                     .show()
             }
+        }
+    }
+
+    data class ClassifierOutput(val name: String, val confidence: Float) {
+        override fun toString(): String {
+            return "$name $confidence"
         }
     }
 
