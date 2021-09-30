@@ -1,7 +1,6 @@
 package com.example.trpo_classifier.fragments
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
@@ -13,12 +12,14 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
-import com.example.trpo_classifier.MainActivity
+import com.example.trpo_classifier.data.ClassifierOutput
+import com.example.trpo_classifier.data.ImageAnalyzer
 import com.example.trpo_classifier.databinding.CamScreenBinding
-import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.label.ImageLabeler
+import com.google.mlkit.vision.label.ImageLabeling
+import com.google.mlkit.vision.label.defaults.ImageLabelerOptions
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 
@@ -32,6 +33,7 @@ class CamFragment : Fragment() {
     private val REQUEST_CODE_PERMISSIONS = 10
     private val REQUIRED_PERMISSIONS = arrayOf(Manifest.permission.CAMERA)
     private lateinit var cameraExecutor: ExecutorService
+    private lateinit var labeler: ImageLabeler
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -44,12 +46,14 @@ class CamFragment : Fragment() {
 
     override fun onStart() {
         super.onStart()
+
         cameraExecutor = Executors.newSingleThreadExecutor()
+        labeler =
+            ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS)
 
         requestCameraPermissions()
     }
 
-    @SuppressLint("UnsafeOptInUsageError")
     private fun startCamera() {
         val cameraProviderFuture = ProcessCameraProvider.getInstance(requireContext())
 
@@ -68,16 +72,21 @@ class CamFragment : Fragment() {
                 .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                 .build()
                 .also {
-                    it.setAnalyzer(cameraExecutor, { imageProxy ->
-                        val mediaImage = imageProxy.image
-                        mediaImage.let {
-                            val image: InputImage = InputImage.fromMediaImage(
-                                mediaImage,
-                                imageProxy.imageInfo.rotationDegrees
-                            )
-                            //TODO Pass image to an ML Kit Vision API
-                            binding.outputTextView.text = "Image processing"
-                        }
+                    it.setAnalyzer(cameraExecutor, ImageAnalyzer { image ->
+                        labeler.process(image)
+                            .addOnSuccessListener { labels ->
+                                val outPutArray: MutableList<ClassifierOutput> = mutableListOf()
+                                outPutArray.clear()
+                                labels.forEach { label ->
+                                    val text = label.text
+                                    val confidence = label.confidence
+                                    outPutArray.add(ClassifierOutput(text, confidence))
+                                }
+                                binding.outputTextView.text = outPutArray.toString()
+                            }
+                            .addOnFailureListener {
+                                Log.e(TAG, "startCamera: Classifier ex", it.cause)
+                            }
                     })
                 }
             // Select back camera as a default
