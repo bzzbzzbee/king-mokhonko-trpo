@@ -13,9 +13,11 @@
         android:layout_height="match_parent" />
 
     <TextView
+        android:gravity="right"
+        android:padding="4dp"
         android:id="@+id/outputTextView"
-        android:text="Hello"
-        android:background="@color/white"
+        android:textColor="#03FA0D"
+        android:background="@android:color/transparent"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="16dp"

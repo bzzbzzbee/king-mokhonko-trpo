@@ -82,7 +82,8 @@ class CamFragment : Fragment() {
                                     val confidence = label.confidence
                                     outPutArray.add(ClassifierOutput(text, confidence))
                                 }
-                                binding.outputTextView.text = outPutArray.toString()
+                                val text = outPutArray.OutPutText()
+                                binding.outputTextView.text = text
                             }
                             .addOnFailureListener {
                                 Log.e(TAG, "startCamera: Classifier ex", it.cause)
@@ -150,4 +151,12 @@ class CamFragment : Fragment() {
         cameraExecutor.shutdown()
         _binding = null
     }
+}
+
+private fun <E> MutableList<E>.OutPutText(): String {
+    var text = String()
+    this.forEach {
+        text += it.toString() + '\n'
+    }
+    return text
 }
