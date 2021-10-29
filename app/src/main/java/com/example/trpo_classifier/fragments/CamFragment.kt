@@ -140,8 +140,7 @@ class CamFragment : Fragment() {
                     requireContext(),
                     "Permissions not granted by the user.",
                     Toast.LENGTH_SHORT
-                )
-                    .show()
+                ).show()
             }
         }
     }
