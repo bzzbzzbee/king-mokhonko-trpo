@@ -16,4 +16,4 @@ jobs:
       - name: Build with Gradle
         run: ./gradlew assembleDebug
       - name: Run some unit ests
-        run: ./gradlew checkAll
+        run: ./gradlew check
